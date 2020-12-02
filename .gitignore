@@ -1,0 +1,6 @@
+venv
+proj/keys.py
+*.sqlite3
+.idea
+static
+media
