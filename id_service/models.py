@@ -5,7 +5,8 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 # Create your models here.
 
-
+# the fields are minimal on record related models, we only track id
+# the idea is user services will keep their own db records,
 # Auth user model is referenced here
 # many DataSet to one User, related_name = data_sets
 # many APIToken to one User, related_name = token
@@ -25,7 +26,6 @@ class DataSet(models.Model):
 class AnimalRecord(models.Model):
     # note animal id here is a uuid for consistency with rest of the models
     id = models.CharField(primary_key=True,max_length=36,null=False,default=uuid4)
-    name = models.CharField(max_length=64, null=True)
     data_set = models.ForeignKey(DataSet,null=True,on_delete=models.CASCADE,related_name="animals")
 
 
@@ -34,7 +34,7 @@ class ImageRecord(models.Model):
     data_set = models.ForeignKey(DataSet,null=True,on_delete=models.CASCADE,related_name="images")
 
     # data related
-    file = models.ImageField(upload_to="images",null=True)  # <= TODO : upgrade to cloud storage backends when appropriate
+    image_file = models.ImageField(upload_to="images", null=True)  # <= TODO : upgrade to cloud storage backends when appropriate
 
     # vectorized image field
     # TODO : integrate postgres cube extension later
@@ -66,8 +66,10 @@ class APIToken(models.Model):
     actions = models.IntegerField(default=0)
     expensive_actions = models.IntegerField(default=0)
 
-    @property
-    def valid_for_action(self):
+    def is_valid(self, expensive=False):
+        # resolve which field to check
+        to_check = (self.expensive_actions, settings.MAX_EXPENSIVE_ACTIONS_PER_SEC) if expensive else (self.actions, settings.MAX_ACTIONS_PER_SEC)
+
         if self.first_use is None:
             return True
         elif self.first_use + timedelta(days=settings.TOKEN_VALID_DAYS) < datetime.now():
@@ -75,22 +77,7 @@ class APIToken(models.Model):
             return False
 
         # users are allowed certain actions per second since the first use
-        if self.actions < int((datetime.now() - self.first_use).total_seconds() * settings.MAX_ACTIONS_PER_SEC):
-            return True
-        else:
-            return False
-
-    # TODO : refactor repeated code
-    @property
-    def valid_for_expensive_action(self):
-        if self.first_use is None:
-            return True
-        elif self.first_use + timedelta(days=settings.TOKEN_VALID_DAYS) < datetime.now():
-            # expired after too many days
-            return False
-
-        # users are allowed certain actions per second since the first use
-        if self.actions < int((datetime.now() - self.first_use).total_seconds() * settings.MAX_EXPENSIVE_ACTIONS_PER_SEC):
+        if to_check[0] < int((datetime.now() - self.first_use).total_seconds() * to_check[1]):
             return True
         else:
             return False
