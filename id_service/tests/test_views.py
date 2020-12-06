@@ -1,6 +1,7 @@
 from django.test import TestCase, Client
 from django.urls import reverse
 
+from .__init__ import get_fake_image_file, get_test_embeddings
 from ..models import DataSet, ImageRecord, AnimalRecord, APIToken
 
 
@@ -42,6 +43,21 @@ class TestEndPoints(TestCase):
     def test_animal_query(self):
         # make a request with the key
         response = self.client.get(reverse("animal_endpoint",kwargs={"pk":self.known_animals[0]}))
+        self.assertEqual(response.status_code, 200)
+
+    def test_image_edit(self):
+        # create record without image payload
+        response = self.client.post(reverse("image_endpoint",kwargs={"pk":"new"}))
+        self.assertEqual(response.status_code, 200)
+
+        # creating record with anything other than POST isn't allowed
+        response = self.client.delete(reverse("image_endpoint",kwargs={"pk":"new"}))
+        self.assertEqual(response.status_code, 404)
+
+        # create record with data
+        response = self.client.post(
+            reverse("image_endpoint",kwargs={"pk":"new"}),
+            {"data_set":str(self.d_set.id),"identity":self.known_animals[0]})
         self.assertEqual(response.status_code, 200)
 
     def test_image_query(self):

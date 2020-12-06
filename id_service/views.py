@@ -50,6 +50,13 @@ class APIMixin:
 
         return super().dispatch(request, *args, **kwargs)
 
+    def get_object(self, queryset=None):
+        # allow creation of records via POST
+        if self.kwargs['pk'] == "new" and self.request.method == "POST":
+            return self.model.objects.create()
+        else:
+            return super().get_object(queryset=queryset)
+
     def get_queryset(self):
         # first get q_set normally
         q_set = super().get_queryset()
@@ -85,8 +92,12 @@ class RelatedListMixin:
         except (ObjectDoesNotExist, AttributeError):
             raise RequestAborted
 
-    def get_object(self):
-        return self.model.objects.get(id=self.kwargs.get("pk"))
+    def get_object(self, queryset=None):
+        # allow creation of records via POST
+        if self.kwargs['pk'] == "new" and self.request.method == "POST":
+            return self.model.objects.create()
+        else:
+            return self.model.objects.get(pk=self.kwargs["pk"])
 
     def render_to_response(self,context):
         json_response = {
@@ -107,9 +118,13 @@ class ImageView(APIMixin, BaseDetailView, BaseUpdateView):
     def get(self, request, *args, **kwargs):
         return super(ImageView, self).get(request, *args, **kwargs)
 
-    @check_token(expensive_action=True)
+    @check_token()
     def post(self, request, *args, **kwargs):
         return super(ImageView, self).post(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        # this is where we call encoder
+        res = super(ImageView, self).form_valid(form=form)
 
     def render_to_response(self,context):
         json_response = {
@@ -128,10 +143,9 @@ class ImageView(APIMixin, BaseDetailView, BaseUpdateView):
 
 
 class AnimalView(RelatedListMixin, APIMixin, BaseListView):
-    """serves animal record with related images, supports pagination?, no POST allowed"""
+    """serves animal record with related images, supports pagination?"""
     model = AnimalRecord
     related_name = "images"
-    fields = ['data_set']
     paginate_by = 32
 
     @check_token()
