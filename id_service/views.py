@@ -1,12 +1,17 @@
 from django.shortcuts import render
-from django.http import JsonResponse, FileResponse, HttpResponseBadRequest, HttpResponse
+from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied,RequestAborted
+from django.http import JsonResponse, FileResponse, HttpResponseBadRequest, HttpResponse
 from django.views.generic.detail import BaseDetailView
 from django.views.generic.list import BaseListView
 from django.views.generic.edit import BaseUpdateView
 
 
 from .models import ImageRecord, AnimalRecord, DataSet, APIToken
+
+###
+## API Views
+#
 
 
 # OMG these views are such a crazy mess
@@ -23,9 +28,12 @@ def check_token(expensive_action=False):
                     view_instance.token.expensive_actions += 1
                 else:
                     view_instance.token.actions += 1
-                view_instance.token.save()
 
-                return decoratee(*args, **kwargs)
+                # save token after view has returned, so we can increment expensive counters later on
+                response = decoratee(*args, **kwargs)
+                view_instance.token.save()
+                return response
+
             else:
                 # TODO : add more helpful error message, make distinction between 429 and 403
                 raise PermissionDenied
@@ -93,11 +101,7 @@ class RelatedListMixin:
             raise RequestAborted
 
     def get_object(self, queryset=None):
-        # allow creation of records via POST
-        if self.kwargs['pk'] == "new" and self.request.method == "POST":
-            return self.model.objects.create()
-        else:
-            return self.model.objects.get(pk=self.kwargs["pk"])
+        return self.model.objects.get(pk=self.kwargs["pk"])
 
     def render_to_response(self,context):
         json_response = {
@@ -124,7 +128,8 @@ class ImageView(APIMixin, BaseDetailView, BaseUpdateView):
 
     def form_valid(self, form):
         # this is where we call encoder
-        res = super(ImageView, self).form_valid(form=form)
+        self.object = form.save()
+        return self.render_to_response({'object':self.object})
 
     def render_to_response(self,context):
         json_response = {
@@ -188,8 +193,32 @@ class DataSetView(RelatedListMixin, APIMixin, BaseListView, BaseUpdateView):
 
         return JsonResponse(json_response)
 
+# TODO : finish static and management views
+
+###
+## Management Views
+#
+def get_documentation(request):
+    pass
 
 
+def new_token(request):
+    pass
 
 
+@login_required()
+def new_dataset(request):
+    pass
+
+
+###
+## Bonus / About Me pages
+#
+
+def get_about_me(request):
+    pass
+
+
+def get_demo_app(request):
+    pass
 

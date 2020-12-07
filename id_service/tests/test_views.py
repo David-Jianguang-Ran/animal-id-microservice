@@ -1,8 +1,9 @@
 from django.test import TestCase, Client
 from django.urls import reverse
 
+
 from .__init__ import get_fake_image_file, get_test_embeddings
-from ..models import DataSet, ImageRecord, AnimalRecord, APIToken
+from ..models import DataSet, ImageRecord, AnimalRecord, APIToken, settings
 
 
 class TestEndPoints(TestCase):
@@ -55,10 +56,14 @@ class TestEndPoints(TestCase):
         self.assertEqual(response.status_code, 404)
 
         # create record with data
-        response = self.client.post(
-            reverse("image_endpoint",kwargs={"pk":"new"}),
-            {"data_set":str(self.d_set.id),"identity":self.known_animals[0]})
+        with open(settings.BASE_DIR.joinpath("id_service/static/id_service/test_image.png"),"rb") as f:
+            response = self.client.post(
+                reverse("image_endpoint",kwargs={"pk":"new"}),
+                {"data_set":str(self.d_set.id),"identity":self.known_animals[0],"image_file":f}
+            )
         self.assertEqual(response.status_code, 200)
+        found = ImageRecord.objects.get(id=response.json()['id'])
+        self.assertTrue(isinstance(found,ImageRecord))
 
     def test_image_query(self):
         # test private image
