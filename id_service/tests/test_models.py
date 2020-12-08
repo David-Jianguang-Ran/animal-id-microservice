@@ -1,21 +1,11 @@
 from django.test import TestCase
-from django.core.files.base import ContentFile
-from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.exceptions import ObjectDoesNotExist
 
 from .__init__ import get_fake_image_file, get_test_embeddings
 from ..models import *
 
-from PIL import Image
-from io import BytesIO
-
-import numpy as np
-import random
 
 COLLISION_TEST_COUNT = 10000
-
-
-
 
 
 class TestRecordsBasic(TestCase):
@@ -44,6 +34,23 @@ class TestRecordsBasic(TestCase):
         self.assertIsNone(found.identity)
         self.assertIsNone(found.data_set)
 
+    def test_image_vectors_property(self):
+
+        embeddings = get_test_embeddings()
+        insts = []
+
+        # check if property setter works
+        for each_vector in embeddings:
+            inst = ImageRecord.objects.create()
+            inst.vector = each_vector
+            insts.append(inst)
+            inst.save()
+
+
+        # check if property getter works
+        for inst, vector in zip(insts,embeddings):
+            self.assertEqual(inst.vector, tuple(vector))
+
     def test_image_vectors(self):
         # get mock image vectors
         embeddings = get_test_embeddings()
@@ -59,15 +66,19 @@ class TestRecordsBasic(TestCase):
         # try query by vector
         t0, t1, t2, t3 = embeddings[-1]
         found_set = ImageRecord.objects.filter(
-            v0__range=(t0 - 10.0, t0 + 10.0),
-            v1__range=(t1 - 10.0, t1 + 10.0),
-            v2__range=(t2 - 10.0, t2 + 10.0),
-            v3__range=(t3 - 10.0, t3 + 10.0),
+            v0__range=(t0 - settings.SPACIAL_QUERY_DIST, t0 + settings.SPACIAL_QUERY_DIST),
+            v1__range=(t1 - settings.SPACIAL_QUERY_DIST, t1 + settings.SPACIAL_QUERY_DIST),
+            v2__range=(t2 - settings.SPACIAL_QUERY_DIST, t2 + settings.SPACIAL_QUERY_DIST),
+            v3__range=(t3 - settings.SPACIAL_QUERY_DIST, t3 + settings.SPACIAL_QUERY_DIST),
         )
 
         # check of all but image 0 are in found set
         self.assertListEqual([each_id for each_id in found_set.values_list("id",flat=True)],ids[1:])
 
+        # query this time with class method shortcut
+        found_set = ImageRecord.vector_queryset(embeddings[-1])
+        # check of all but image 0 are in found set
+        self.assertListEqual([each_id for each_id in found_set.values_list("id", flat=True)], ids[1:])
 
     def test_animal_record(self):
         # create animal Record

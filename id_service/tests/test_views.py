@@ -7,7 +7,8 @@ from ..models import DataSet, ImageRecord, AnimalRecord, APIToken, settings
 
 
 class TestEndPoints(TestCase):
-
+    # I know this test case is more like integrated test than unit test
+    # oh well ~
     @classmethod
     def setUpTestData(cls):
         # create a default dataset
@@ -19,7 +20,7 @@ class TestEndPoints(TestCase):
         # create some public image records
         for i in range(100):
             img = ImageRecord.objects.create()
-            cls.known_images.append(img.id)
+            cls.known_images.append(str(img.id))
 
         # create animal records with associated images
         animal_holder = None
@@ -28,15 +29,17 @@ class TestEndPoints(TestCase):
             if i % 5 == 0:
                 # create a new animal record
                 animal_holder = AnimalRecord.objects.create(data_set=cls.d_set)
-                cls.known_animals.append(animal_holder.id)
+                cls.known_animals.append(str(animal_holder.id))
 
             img = ImageRecord.objects.create(data_set=cls.d_set,identity=animal_holder)
-            cls.known_images.append(img.id)
+            cls.known_images.append(str(img.id))
 
     def setUp(self) -> None:
         # make a key
         key = APIToken.objects.create()
         key.read_set.add(self.d_set)
+        key.write_set = self.d_set
+        key.save()
 
         # create a test client
         self.client = Client(HTTP_X_API_KEY=key.id)
@@ -82,11 +85,15 @@ class TestEndPoints(TestCase):
         # test viewing all animals in d_set
         response = self.client.get(reverse("data_set_endpoint",kwargs={"pk":str(self.d_set.id),"rel":"animals"}))
         self.assertEqual(response.status_code, 200)
+        self.assertListEqual(response.json()["animals"],self.known_animals)
+
         # test viewing all images in d_set
         response = self.client.get(reverse("data_set_endpoint",kwargs={"pk":str(self.d_set.id),"rel":"images"}))
         self.assertEqual(response.status_code, 200)
+        self.assertListEqual(response.json()["images"],self.known_images[100:])
 
         # test delete private d_set
         response = self.client.delete(reverse("data_set_endpoint",kwargs={"pk":str(self.d_set.id)}))
         self.assertEqual(response.status_code, 200)
+        # check if the all images belong to d_set is gone
         self.assertEqual(len(ImageRecord.objects.all()),100)
