@@ -45,6 +45,25 @@ class ImageRecord(models.Model):
 
     identity = models.ForeignKey(AnimalRecord,null=True,on_delete=models.CASCADE,related_name="images")
 
+    @property
+    def vector(self):
+        return self.v0, self.v1, self.v2, self.v3
+
+    @vector.setter
+    def vector(self,vector_as_tuple):
+        """NOTE: this setter does not call model.save()"""
+        self.v0, self.v1, self.v2, self.v3 = vector_as_tuple
+
+    @classmethod
+    def vector_queryset(cls,vector,half_range=settings.SPACIAL_QUERY_DIST):
+        """get a queryset filtered by proximity of model.vector to vector"""
+        q0, q1, q2, q3 = vector
+        return cls.objects.filter(
+            v0__range=(q0 - half_range, q0 + half_range),
+            v1__range=(q1 - half_range, q1 + half_range),
+            v2__range=(q2 - half_range, q2 + half_range),
+            v3__range=(q3 - half_range, q3 + half_range),
+        )
 
 class APIToken(models.Model):
     # TODO : find better secret generation and verification
