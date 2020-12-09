@@ -38,10 +38,10 @@ class ImageRecord(models.Model):
 
     # vectorized image field
     # TODO : integrate postgres cube extension later
-    v0 = models.DecimalField(max_digits=12,decimal_places=8,null=True)
-    v1 = models.DecimalField(max_digits=12,decimal_places=8,null=True)
-    v2 = models.DecimalField(max_digits=12,decimal_places=8,null=True)
-    v3 = models.DecimalField(max_digits=12,decimal_places=8,null=True)
+    v0 = models.FloatField(null=True)
+    v1 = models.FloatField(null=True)
+    v2 = models.FloatField(null=True)
+    v3 = models.FloatField(null=True)
 
     identity = models.ForeignKey(AnimalRecord,null=True,on_delete=models.CASCADE,related_name="images")
 
@@ -52,6 +52,7 @@ class ImageRecord(models.Model):
     @vector.setter
     def vector(self,vector_as_tuple):
         """NOTE: this setter does not call model.save()"""
+        vector_as_tuple = [round(each,8)for each in vector_as_tuple]
         self.v0, self.v1, self.v2, self.v3 = vector_as_tuple
 
     @classmethod
