@@ -22,7 +22,7 @@ def get_fake_image_file():
 def get_test_embeddings():
     # returns some 4 vectors from the encoder
     return [
-        [104.171407, 114.440775, -120.054556, -106.2461677],  # <= clearly this one is not like the others
+        [-16.449678,   8.417067,  -8.808469, -28.806696],  # <= clearly this one is not like the others
         [4.638023,  7.8766  , -23.59152 , -7.3079066],
         [7.703525,  4.752338, -21.905794, -9.553763 ],
         [4.171407, 14.440775, -20.054556, -6.2461677],

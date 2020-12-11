@@ -1,6 +1,7 @@
 venv
 proj/keys.py
+id_service/trained_models
 *.sqlite3
 .idea
-static
+/static
 media

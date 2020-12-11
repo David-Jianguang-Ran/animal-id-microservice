@@ -10,6 +10,7 @@ from django.db.models import Model
 
 
 from .models import ImageRecord, AnimalRecord, DataSet, APIToken
+from .inference import standardize_image, Encoder, Differentiator
 
 
 ###
@@ -125,7 +126,8 @@ class UnifiedBase(View):
     def get_form(self,request):
         # get a model form, fill it with data
         # to be used in POST
-        return model_forms.modelform_factory(self.model,fields=self.fields)(data=self.request.POST,files=self.request.FILES)
+        return model_forms.modelform_factory(self.model,fields=self.fields)(
+            data=self.request.POST,files=self.request.FILES,instance=self.object)
 
     def json_response(self):
         # dump out basic fields, always include id
@@ -204,25 +206,80 @@ class ImageView(UnifiedBase):
         # only save form when data is valid
         if populated_form.is_valid():
             self.object = populated_form.save(commit=False)
+
+            # TODO : validate image and call image encoder here
+            try:
+                cleaned_image, embedding_vector = self.process_image(populated_form.files["image_file"])
+                embedding_vector = list(embedding_vector[0])
+                # update object with computed image related data
+                self.object.image_file.save(str(self.object.id),cleaned_image)
+                self.object.vector = embedding_vector
+
+                # if an identity isn't provided, make new or find matching one
+                if self.object.identity is None:
+                    self.object.identity = self.get_identity(embedding_vector)
+
+            except KeyError:
+                # No image is uploaded, no ML inference
+                pass
+
         # new records have empty forms, but still it's not a bad request
         elif self.kwargs['pk'] != "new":
             return False
 
-        # TODO : validate image and call image encoder here
         return True
 
     @check_token(expensive_action=True)
-    def encode_image(self):
-        pass
+    def process_image(self,image_file):
+        """
+        returns a cleaned, standard sized django ImageFile, and embedding vector of image
+        """
+        # resize image
+        new_file, pixels = standardize_image(image_file)
+
+        # run pixels through encoder
+        vector = Encoder().predict(pixels)
+        vector = list(vector)
+
+        return new_file, vector
 
     @check_token(expensive_action=True)
-    def get_identity(self):
-        # check if an encoding exists
+    def get_identity(self,vector):
+        # query db by vector proximity
+        same_set = ImageRecord.vector_queryset(vector)
 
-        # query db and verify each possible candidate
+        # bail early and create new id if nothing came back from db
+        if len(same_set) == 0:
+            new_animal = AnimalRecord.objects.create(data_set=self.token.write_set)
+            return new_animal
 
+        #  verify each possible candidate
+        compare_left = [each_record.vector for each_record in same_set]
+        compare_right = [vector for each in compare_left]
+        sameness = Differentiator().predict(compare_left,compare_right)
+
+        # decode and find animal id
         # write identity to object
-        pass
+        possible_ids = {}
+
+        for is_same, animal_id in zip(list(sameness),same_set.values_list("identity_id",flat=True)):
+            # tally each hit in identity/sameness
+            if is_same:
+                try:
+                    possible_ids[str(animal_id)] += 1
+                except KeyError:
+                    possible_ids[str(animal_id)] = 1
+
+        # if none are found, make new id
+        if len(possible_ids) == 0:
+            new_animal = AnimalRecord.objects.create(data_set=self.token.write_set)
+            return new_animal
+        else:
+            # take highest count, assign image to that animal
+            ranked = sorted(possible_ids.items(),key=lambda x:x[1],reverse=True)
+
+            found_animal = AnimalRecord.objects.get(id=ranked[0][0])
+            return found_animal
 
 
 class AnimalView(UnifiedBase):

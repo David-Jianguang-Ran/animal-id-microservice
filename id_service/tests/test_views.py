@@ -5,10 +5,7 @@ from django.urls import reverse
 from .__init__ import get_fake_image_file, get_test_embeddings
 from ..models import DataSet, ImageRecord, AnimalRecord, APIToken, settings
 
-
-class TestEndPoints(TestCase):
-    # I know this test case is more like integrated test than unit test
-    # oh well ~
+class DBSetUpMixin:
     @classmethod
     def setUpTestData(cls):
         # create a default dataset
@@ -33,6 +30,12 @@ class TestEndPoints(TestCase):
 
             img = ImageRecord.objects.create(data_set=cls.d_set,identity=animal_holder)
             cls.known_images.append(str(img.id))
+
+
+class TestEndPoints(DBSetUpMixin, TestCase):
+    # I know this test case is more like integrated test than unit test
+    # oh well ~
+
 
     def setUp(self) -> None:
         # make a key
@@ -97,3 +100,33 @@ class TestEndPoints(TestCase):
         self.assertEqual(response.status_code, 200)
         # check if the all images belong to d_set is gone
         self.assertEqual(len(ImageRecord.objects.all()),100)
+
+
+class TestImageProcessing(DBSetUpMixin, TestCase):
+
+    def setUp(self) -> None:
+
+        # make a new token and d_set
+        d_set = DataSet.objects.create()
+        key = APIToken.objects.create(write_set=d_set)
+        key.read_set.add(d_set)
+
+        # create a test client
+        self.client = Client(HTTP_X_API_KEY=key.id)
+
+    def test_single_image_upload(self):
+
+        for i in range(1,5):
+            # create record with data
+            with open(settings.BASE_DIR.joinpath(f"id_service/static/id_service/test_cat_{i}.png"), "rb") as f:
+                response = self.client.post(
+                    reverse("image_endpoint", kwargs={"pk": "new"}),
+                    {"image_file": f}
+                )
+            self.assertEqual(response.status_code, 200)
+            # check if a image record has been created
+            found = ImageRecord.objects.get(id=response.json()['id'])
+            self.assertTrue(isinstance(found, ImageRecord))
+            # check if an identity has been created and linked
+            found = AnimalRecord.objects.get(id=response.json()['identity'])
+            self.assertTrue(isinstance(found, AnimalRecord))
