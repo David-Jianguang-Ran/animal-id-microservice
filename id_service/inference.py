@@ -71,6 +71,24 @@ class Differentiator(YouOnlyLoadOnce):
         return sameness_bool
 
 
+def get_square_box(width, height):
+    """returns a 4 tuple pil coord box 1:1 for a given image obj"""
+
+    def _long_to_short(lower, higher, target_width):
+        """returns tuple new lower, new higher seperated by target_width"""
+        crop_one_side = (higher - lower - target_width) // 2
+        return lower + crop_one_side, higher - crop_one_side
+
+    # make a bounding box of the whole image
+    box = [0, 0, width, height]
+    # center crop long side to fit 1:1
+    if box[2] > box[3]:
+        box[0], box[2] = _long_to_short(0,box[2],box[3])
+    elif box[2] < box[3]:
+        box[1], box[3] = _long_to_short(0,box[3],box[2])
+    return box
+
+
 def standardize_image(input_image: ImageFile, new_size=settings.IMAGE_SIZE) -> (ImageFile, np.ndarray):
     """
     returns a new ImageFile of specified size, free of metadata
@@ -80,8 +98,10 @@ def standardize_image(input_image: ImageFile, new_size=settings.IMAGE_SIZE) -> (
     # first open the image in PIL
     old_image = Image.open(input_image)
 
-    # resize then get pixels
-    pixels = np.array(old_image.resize(new_size))
+    # resize to 1:1 then get pixels
+    pixels = np.array(
+        old_image.resize(new_size,box=get_square_box(*old_image.size))
+    )
 
     # make a new pil image file then django file
     new_image = Image.fromarray(pixels,mode="RGB")

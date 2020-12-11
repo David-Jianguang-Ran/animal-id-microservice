@@ -126,7 +126,8 @@ class UnifiedBase(View):
     def get_form(self,request):
         # get a model form, fill it with data
         # to be used in POST
-        return model_forms.modelform_factory(self.model,fields=self.fields)(data=self.request.POST,files=self.request.FILES)
+        return model_forms.modelform_factory(self.model,fields=self.fields)(
+            data=self.request.POST,files=self.request.FILES,instance=self.object)
 
     def json_response(self):
         # dump out basic fields, always include id
@@ -211,7 +212,7 @@ class ImageView(UnifiedBase):
                 cleaned_image, embedding_vector = self.process_image(populated_form.files["image_file"])
                 embedding_vector = list(embedding_vector[0])
                 # update object with computed image related data
-                self.object.image_file = cleaned_image
+                self.object.image_file.save(str(self.object.id),cleaned_image)
                 self.object.vector = embedding_vector
 
                 # if an identity isn't provided, make new or find matching one

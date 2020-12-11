@@ -14,10 +14,11 @@ from uuid import uuid4
 
 class DataSet(models.Model):
     id = models.CharField(primary_key=True,max_length=36,null=False,default=uuid4)
-    name = models.CharField(max_length=64,null=True)
+    name = models.CharField(max_length=64,blank=True)
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
+        blank=True,
         on_delete=models.SET_NULL,  # <= let's not delete entire database when users pack up and go home
         related_name="data_sets"
     )
@@ -26,15 +27,15 @@ class DataSet(models.Model):
 class AnimalRecord(models.Model):
     # note animal id here is a uuid for consistency with rest of the models
     id = models.CharField(primary_key=True,max_length=36,null=False,default=uuid4)
-    data_set = models.ForeignKey(DataSet,null=True,on_delete=models.CASCADE,related_name="animals")
+    data_set = models.ForeignKey(DataSet,null=True,blank=True,on_delete=models.CASCADE,related_name="animals")
 
 
 class ImageRecord(models.Model):
     id = models.CharField(primary_key=True,max_length=36,null=False,default=uuid4)
-    data_set = models.ForeignKey(DataSet,null=True,on_delete=models.CASCADE,related_name="images")
+    data_set = models.ForeignKey(DataSet,null=True, blank=True,on_delete=models.CASCADE,related_name="images")
 
     # data related
-    image_file = models.ImageField(upload_to="images", null=True)  # <= TODO : upgrade to cloud storage backends when appropriate
+    image_file = models.ImageField(upload_to="images", null=True, blank=True)  # <= TODO : upgrade to cloud storage backends when appropriate
 
     # vectorized image field
     # TODO : integrate postgres cube extension later
@@ -43,7 +44,7 @@ class ImageRecord(models.Model):
     v2 = models.FloatField(null=True)
     v3 = models.FloatField(null=True)
 
-    identity = models.ForeignKey(AnimalRecord,null=True,on_delete=models.CASCADE,related_name="images")
+    identity = models.ForeignKey(AnimalRecord,null=True,blank=True,on_delete=models.CASCADE,related_name="images")
 
     @property
     def vector(self):
