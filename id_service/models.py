@@ -67,6 +67,7 @@ class ImageRecord(models.Model):
             v3__range=(q3 - half_range, q3 + half_range),
         )
 
+
 class APIToken(models.Model):
     # TODO : find better secret generation and verification
     id = models.CharField(primary_key=True,max_length=36,null=False,default=uuid4)

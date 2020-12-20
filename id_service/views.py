@@ -65,8 +65,8 @@ class UnifiedBase(View):
     -implement GET POST or DELETE handlers, note the handlers can just return True for a json response  
     -(optional) use check_token to decorate views for rate limiting  
     -(optional) in order to return related model lists, either:  
-    define defualt_related_names in class declearation _OR_ 
-    include an kwrard argument rel in url routing 
+    define default_related_names in class declaration _OR_
+    include an kwarg str:rel in url routing
     """
     model = None  # <= django model class
     default_related_names = []  # <= related name of foreign key fields
@@ -262,7 +262,7 @@ class ImageView(UnifiedBase):
         # write identity to object
         possible_ids = {}
 
-        for is_same, animal_id in zip(list(sameness),same_set.values_list("identity_id",flat=True)):
+        for is_same, animal_id in zip(sameness,same_set.values_list("identity_id",flat=True)):
             # tally each hit in identity/sameness
             if is_same:
                 try:
