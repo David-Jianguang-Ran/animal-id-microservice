@@ -10,7 +10,7 @@ from django.db.models import Model
 
 
 from .models import ImageRecord, AnimalRecord, DataSet, APIToken
-from .inference import standardize_image, Encoder, Differentiator
+from .inference import standardize_image, call_encoder, call_differenciator
 
 
 ###
@@ -65,8 +65,8 @@ class UnifiedBase(View):
     -implement GET POST or DELETE handlers, note the handlers can just return True for a json response  
     -(optional) use check_token to decorate views for rate limiting  
     -(optional) in order to return related model lists, either:  
-    define defualt_related_names in class declearation _OR_ 
-    include an kwrard argument rel in url routing 
+    define default_related_names in class declaration _OR_
+    include an kwarg str:rel in url routing
     """
     model = None  # <= django model class
     default_related_names = []  # <= related name of foreign key fields
@@ -210,7 +210,6 @@ class ImageView(UnifiedBase):
             # TODO : validate image and call image encoder here
             try:
                 cleaned_image, embedding_vector = self.process_image(populated_form.files["image_file"])
-                embedding_vector = list(embedding_vector[0])
                 # update object with computed image related data
                 self.object.image_file.save(str(self.object.id),cleaned_image)
                 self.object.vector = embedding_vector
@@ -238,8 +237,7 @@ class ImageView(UnifiedBase):
         new_file, pixels = standardize_image(image_file)
 
         # run pixels through encoder
-        vector = Encoder().predict(pixels)
-        vector = list(vector)
+        vector = call_encoder(pixels)
 
         return new_file, vector
 
@@ -256,13 +254,13 @@ class ImageView(UnifiedBase):
         #  verify each possible candidate
         compare_left = [each_record.vector for each_record in same_set]
         compare_right = [vector for each in compare_left]
-        sameness = Differentiator().predict(compare_left,compare_right)
+        sameness = call_differenciator(compare_left,compare_right)
 
         # decode and find animal id
         # write identity to object
         possible_ids = {}
 
-        for is_same, animal_id in zip(list(sameness),same_set.values_list("identity_id",flat=True)):
+        for is_same, animal_id in zip(sameness,same_set.values_list("identity_id",flat=True)):
             # tally each hit in identity/sameness
             if is_same:
                 try:

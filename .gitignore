@@ -5,3 +5,7 @@ id_service/trained_models
 .idea
 /static
 media
+
+# added by wyv
+.DS_Store
+.sync

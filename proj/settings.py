@@ -131,11 +131,10 @@ MAX_ACTIONS_PER_SEC = 1.
 MAX_EXPENSIVE_ACTIONS_PER_SEC = 0.1
 SPACIAL_QUERY_DIST = 10.
 
-# we need to disable GPU inference to avoid GPU memory allocation issues when running multiple models
-os.environ["CUDA_VISIBLE_DEVICES"] = ""
+ENCODER_NAME = "encoder"
+DIFFERENTIATOR_NAME = "differ"
+TF_SERVER_PORT = 8501
 
 IMAGE_SIZE = 240,240
-ENCODER_DIR = "demo-1-encoder"
-DIFFERENTIATOR_DIR = "demo-1-differentiator"
 SAMENESS_THRESHOLD = 0.7
 

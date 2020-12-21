@@ -1,0 +1,20 @@
+version: "3.0"
+
+services:
+  encoder:
+    image: tensorflow/serving
+    environment:
+      - MODEL_NAME=encoder
+    volumes:
+      - ./id_service/trained_models/demo-1-encoder:/models/encoder/0/
+  differ:
+    image: tensorflow/serving
+    environment:
+      - MODEL_NAME=differ
+    volumes:
+      - ./id_service/trained_models/demo-1-differ:/models/differ/0/
+  web:
+    build: .
+    command: python manage.py test
+    ports:
+      - "8000:8000"
