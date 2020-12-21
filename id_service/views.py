@@ -10,7 +10,7 @@ from django.db.models import Model
 
 
 from .models import ImageRecord, AnimalRecord, DataSet, APIToken
-from .inference import standardize_image, Encoder, Differentiator
+from .inference import standardize_image, call_encoder, call_differenciator
 
 
 ###
@@ -238,7 +238,7 @@ class ImageView(UnifiedBase):
         new_file, pixels = standardize_image(image_file)
 
         # run pixels through encoder
-        vector = Encoder().predict(pixels)
+        vector = call_encoder(pixels)
         vector = list(vector)
 
         return new_file, vector
@@ -256,7 +256,7 @@ class ImageView(UnifiedBase):
         #  verify each possible candidate
         compare_left = [each_record.vector for each_record in same_set]
         compare_right = [vector for each in compare_left]
-        sameness = Differentiator().predict(compare_left,compare_right)
+        sameness = call_differenciator(compare_left,compare_right)
 
         # decode and find animal id
         # write identity to object

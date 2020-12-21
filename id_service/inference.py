@@ -14,22 +14,23 @@ from django.core.exceptions import ImproperlyConfigured
 from django.core.files.images import ImageFile
 
 
+# Note: the tf-serving API calls assume each model is served by its own tfs container
+# see docker-compose for the tf-serving container configs
 def call_encoder(pixels:np.ndarray):
     """returns vector embedding of a single image as np array"""
     url = "http://" + "/".join([
-        settings.INFERENCE_HOST,
+        f"{settings.ENCODER_NAME}:{settings.TF_SERVER_PORT}",
         "v1/models",
         settings.ENCODER_NAME
     ]) + ":predict"
     data = {
-        "instances": [pixels]
+        "instances": pixels.tolist()
     }
     response = requests.post(url,json=data)
+    # return the first prediction since images are always given in batch of 1
     return response.json()['predictions'][0]
 
 
-# TODO : rebuild model to have a single concatenated input
-# see : https://www.tensorflow.org/tfx/serving/signature_defs
 def call_differenciator(batch_left, batch_right):
     """returns sameness for the entire batch"""
     # combine two halfs into a single batch
@@ -37,15 +38,17 @@ def call_differenciator(batch_left, batch_right):
 
     # call tf serving API
     url = "http://" + "/".join([
-        settings.INFERENCE_HOST,
+        f"{settings.DIFFERENTIATOR_NAME}:{settings.TF_SERVER_PORT}",
         "v1/models",
-        settings.ENCODER_NAME
+        settings.DIFFERENTIATOR_NAME
     ]) + ":predict"
     data = {
-        "instances" : [batch]
+        "instances" : batch.tolist()
     }
-    response = requests.post(url,json=data)
-    return response.json()['predictions']
+    response = requests.post(url, json=data)
+
+    # convert network raw output to bool using sameness threshold
+    return [each >= settings.SAMENESS_THRESHOLD for each in response.json()['predictions']]
 
 
 def get_square_box(width, height):

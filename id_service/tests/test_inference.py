@@ -39,9 +39,8 @@ class TestMLModels(TestCase):
         new_image, pixels = standardize_image(get_fake_image_file())
 
         # do inference
-        embedding = Encoder().predict(pixels)
-
-        self.assertEqual(embedding.shape,(1, 4))
+        embedding = call_encoder(pixels)
+        self.assertEqual(len(embedding), 4)
 
     def test_differ(self):
 
@@ -50,6 +49,5 @@ class TestMLModels(TestCase):
         right = np.array([embeddings[0]for i in range(3)])
         left = np.array(embeddings[1:])
 
-        sameness = Differentiator().predict(right,left)
-
-        self.assertEqual(sameness.shape,(3,1))
+        sameness = call_differenciator(left,right)
+        self.assertEqual(len(sameness), 3)
