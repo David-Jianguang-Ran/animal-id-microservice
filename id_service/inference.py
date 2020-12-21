@@ -1,8 +1,7 @@
 """
-This is a very inefficient way of doing inference, but it will do for now
-models are not optimized and we are simply using keras and other dev tools to do inference
-only if we have some real production volume
-then we will we need tensorflow serving, probably in a docker container
+Inference is now done by Django calling REST API on tf-serving containers
+each model have their own container, reachable by other containerized services through default network  
+see docker-compose.yml for the tf-serving container configs
 """
 import numpy as np
 import requests
@@ -16,8 +15,8 @@ from django.core.files.images import ImageFile
 
 # Note: the tf-serving API calls assume each model is served by its own tfs container
 # see docker-compose for the tf-serving container configs
-def call_encoder(pixels:np.ndarray):
-    """returns vector embedding of a single image as np array"""
+def call_encoder(pixels:np.ndarray) -> list:
+    """returns vector embedding of a single image as python list"""
     url = "http://" + "/".join([
         f"{settings.ENCODER_NAME}:{settings.TF_SERVER_PORT}",
         "v1/models",
@@ -31,8 +30,11 @@ def call_encoder(pixels:np.ndarray):
     return response.json()['predictions'][0]
 
 
-def call_differenciator(batch_left, batch_right):
-    """returns sameness for the entire batch"""
+def call_differenciator(batch_left, batch_right) -> list:
+    """
+    returns sameness for the entire batch  
+    note: each batch should be a list of vectors
+    """
     # combine two halfs into a single batch
     batch = np.concatenate([batch_left,batch_right], axis=1)
 
@@ -74,7 +76,6 @@ def standardize_image(input_image: ImageFile, new_size=settings.IMAGE_SIZE) -> (
     returns a new ImageFile of specified size, free of metadata
     and pixels stored in np array
     """
-
     # first open the image in PIL
     old_image = Image.open(input_image)
 
