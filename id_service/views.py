@@ -210,7 +210,6 @@ class ImageView(UnifiedBase):
             # TODO : validate image and call image encoder here
             try:
                 cleaned_image, embedding_vector = self.process_image(populated_form.files["image_file"])
-                embedding_vector = list(embedding_vector[0])
                 # update object with computed image related data
                 self.object.image_file.save(str(self.object.id),cleaned_image)
                 self.object.vector = embedding_vector
@@ -239,7 +238,6 @@ class ImageView(UnifiedBase):
 
         # run pixels through encoder
         vector = call_encoder(pixels)
-        vector = list(vector)
 
         return new_file, vector
 

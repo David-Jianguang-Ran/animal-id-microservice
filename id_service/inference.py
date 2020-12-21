@@ -48,7 +48,7 @@ def call_differenciator(batch_left, batch_right):
     response = requests.post(url, json=data)
 
     # convert network raw output to bool using sameness threshold
-    return [each >= settings.SAMENESS_THRESHOLD for each in response.json()['predictions']]
+    return [each[0] >= settings.SAMENESS_THRESHOLD for each in response.json()['predictions']]
 
 
 def get_square_box(width, height):

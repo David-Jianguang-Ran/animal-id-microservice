@@ -7,6 +7,7 @@
 ##
 ##    docker run -p 8000:8000 -it animalid:latest ./manage.py runserver 0.0.0.0:8000
 ##
+## David: is this image supposed to be 1.5Gb? that's HUGE!
 
 # Our base image is ubuntu with one of our hardest dependencies already installed
 FROM python:3.7-buster
